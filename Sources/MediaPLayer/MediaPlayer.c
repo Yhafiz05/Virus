@@ -43,7 +43,7 @@ int is_image_file(const char *filename) {
 void list_image_files() {
     DIR *dir;
     struct dirent *entry;
-    dir = opendir(".");
+    dir = opendir("../../images");
     if (dir != NULL) {
         while ((entry = readdir(dir)) != NULL && num_files < MAX_FILES) {
             if (is_image_file(entry->d_name)) {
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Image Viewer");
-    gtk_window_set_default_size(GTK_WINDOW(window), 400, 300);
+    gtk_window_set_default_size(GTK_WINDOW(window), 800, 800); // Taille fixe de 800x800
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
     hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
@@ -91,3 +91,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+    
