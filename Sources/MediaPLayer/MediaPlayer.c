@@ -21,11 +21,18 @@ on_open_image (GtkButton* button, gpointer user_data)
   gtk_file_filter_add_pattern(filter, "*.svg");
   // Create box dialogue for file selection
 
-	GtkWidget *dialog = gtk_file_chooser_dialog_new (("Open image"),
+	/*GtkWidget *dialog = gtk_file_chooser_dialog_new (("Open image"),
 	                                                 GTK_WINDOW (toplevel),
 	                                                 GTK_FILE_CHOOSER_ACTION_OPEN,
 	                                                 "gtk-ok", GTK_RESPONSE_ACCEPT,
 	                                                 "gtk-cancel", GTK_RESPONSE_CANCEL,
+	                                                 NULL);*/
+
+    GtkWidget *dialog = gtk_file_chooser_dialog_new (("Open image"),
+	                                                 GTK_WINDOW (toplevel),
+	                                                 GTK_FILE_CHOOSER_ACTION_OPEN,
+	                                                 GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+	                                                 GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 	                                                 NULL);
 
   // Adding the images format accept by GTK 
@@ -203,6 +210,7 @@ main (int argc, char **argv)
   GtkApplication *app;
 
   app = gtk_application_new ("org.gtk.example", G_APPLICATION_DEFAULT_FLAGS);
+  //app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
   g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
   status = g_application_run (G_APPLICATION (app), argc, argv);
   g_object_unref (app);
